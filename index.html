@@ -21,8 +21,10 @@ canvas{
   top:50%;
   left:50%;
   transform:translate(-50%,-50%);
-  border:1px solid #ccc;
   background:#000;
+  /* 表示サイズを画面いっぱいに */
+  width:100%;
+  height:100%;
   max-width:100%;
   max-height:100%;
 }
@@ -68,32 +70,34 @@ const video=document.getElementById("video")
 const canvas=document.getElementById("canvas")
 const ctx=canvas.getContext("2d")
 
-// 🎯 比率維持リサイズ（4:3）
+// 🎯 縦横比維持フルスクリーン（iPhoneカメラ風 4:3）
 function resizeCanvas(){
   const vw = window.innerWidth
   const vh = window.innerHeight
 
-  // 元画像の比率（必要に応じて 4/3 など）
-  const aspect = 4 / 3
+  const aspect = 4 / 3 // iPhoneカメラに近い比率
 
-  let width = vw
-  let height = width / aspect
+  let width = vh * aspect
+  let height = vh
 
-  // 画面に収まるように調整
-  if(height > vh){
-    height = vh
-    width = height * aspect
+  // 画面幅に収まらない場合は幅優先
+  if(width > vw){
+    width = vw
+    height = vw / aspect
   }
 
+  // 描画解像度
   canvas.width = width
   canvas.height = height
 
-  // canvas を中央に配置
+  // 表示サイズ
   canvas.style.width = width + "px"
   canvas.style.height = height + "px"
 }
 
+// 初回
 resizeCanvas()
+// リサイズ対応
 window.addEventListener("resize", resizeCanvas)
 
 // ===== 画像 =====
