@@ -2,118 +2,188 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>テント色変更 TEST</title>
+<title>VTuber（調整強化版）</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
 <style>
-  body { text-align:center; font-family:sans-serif; }
-  canvas { border:1px solid #ccc; margin-top:10px; cursor:crosshair; }
+body{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  margin:0;
+  flex-direction:column;
+}
+
+canvas{
+  border:1px solid #ccc;
+}
+
+video{
+  display:none;
+}
 </style>
 </head>
+
 <body>
 
-<h2>クリック長押し or ドラッグで色変更（PC対応）</h2>
+<h2>顔面：馬　β版</h2>
 
-<input type="file" id="fileInput" accept="image/*"><br>
+サイズ:
+<input type="range" id="scaleSlider" min="0.5" max="3" step="0.01" value="1.5">
+<span id="scaleValue">1.5</span>
 
-R <input type="number" id="r" value="255" min="0" max="255">
-G <input type="number" id="g" value="0" min="0" max="255">
-B <input type="number" id="b" value="0" min="0" max="255">
+<br><br>
 
-<br>
+<video id="video" autoplay playsinline></video>
 <canvas id="canvas"></canvas>
 
-<script async src="https://docs.opencv.org/4.x/opencv.js"></script>
-
 <script>
-let canvas = document.getElementById('canvas');
-let ctx = canvas.getContext('2d');
-let img = new Image();
-let originalMat;
+const video=document.getElementById("video")
+const canvas=document.getElementById("canvas")
+const ctx=canvas.getContext("2d")
 
-let isPressing = false;
-let pressTimer;
+canvas.width=640
+canvas.height=480
 
-document.getElementById('fileInput').addEventListener('change', (e) => {
-    let file = e.target.files[0];
-    let reader = new FileReader();
-    reader.onload = () => img.src = reader.result;
-    reader.readAsDataURL(file);
-});
+// ===== 画像 =====
+const faceImg=new Image()
+faceImg.src="face.png"
 
-img.onload = () => {
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
-    originalMat = cv.imread(canvas);
-};
+const faceRightImg=new Image()
+faceRightImg.src="face_right.png"
 
-// ===== PC対応イベント =====
-canvas.addEventListener('mousedown', (e) => {
-    isPressing = true;
-    pressTimer = setTimeout(() => process(e), 300);
-});
+const faceLeftImg=new Image()
+faceLeftImg.src="face_left.png"
 
-canvas.addEventListener('mouseup', () => {
-    isPressing = false;
-    clearTimeout(pressTimer);
-});
+const mouthImg=new Image()
+mouthImg.src="mouth_open.png"
 
-canvas.addEventListener('mousemove', (e) => {
-    if (isPressing) {
-        process(e); // ドラッグ中も処理
-    }
-});
+let scaleAdjust=1.5
 
-// ===== 共通処理 =====
-function process(e) {
-    if (!originalMat) return;
+const slider=document.getElementById("scaleSlider")
+const scaleText=document.getElementById("scaleValue")
 
-    let rect = canvas.getBoundingClientRect();
-    let x = Math.floor(e.clientX - rect.left);
-    let y = Math.floor(e.clientY - rect.top);
-
-    let pixel = ctx.getImageData(x, y, 1, 1).data;
-
-    let tol = 40;
-
-    let lower = new cv.Mat(originalMat.rows, originalMat.cols, originalMat.type(), [
-        Math.max(pixel[0]-tol,0),
-        Math.max(pixel[1]-tol,0),
-        Math.max(pixel[2]-tol,0),
-        0
-    ]);
-
-    let upper = new cv.Mat(originalMat.rows, originalMat.cols, originalMat.type(), [
-        Math.min(pixel[0]+tol,255),
-        Math.min(pixel[1]+tol,255),
-        Math.min(pixel[2]+tol,255),
-        255
-    ]);
-
-    let mask = new cv.Mat();
-    cv.inRange(originalMat, lower, upper, mask);
-
-    let dst = originalMat.clone();
-
-    let r = +document.getElementById('r').value;
-    let g = +document.getElementById('g').value;
-    let b = +document.getElementById('b').value;
-
-    for (let i = 0; i < mask.data.length; i++) {
-        if (mask.data[i] > 0) {
-            let idx = i * 4;
-            dst.data[idx] = r;
-            dst.data[idx+1] = g;
-            dst.data[idx+2] = b;
-        }
-    }
-
-    cv.imshow(canvas, dst);
-
-    mask.delete();
-    dst.delete();
-    lower.delete();
-    upper.delete();
+slider.oninput=()=>{
+scaleAdjust=parseFloat(slider.value)
+scaleText.textContent=scaleAdjust
 }
+
+// ===== MediaPipe =====
+const faceMesh=new FaceMesh({
+locateFile:(file)=>{
+return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+}
+})
+
+faceMesh.setOptions({
+maxNumFaces:1,
+refineLandmarks:true,
+minDetectionConfidence:0.5,
+minTrackingConfidence:0.5
+})
+
+faceMesh.onResults(results=>{
+
+ctx.setTransform(1,0,0,1,0,0)
+ctx.clearRect(0,0,canvas.width,canvas.height)
+ctx.drawImage(results.image,0,0,canvas.width,canvas.height)
+
+if(results.multiFaceLandmarks.length>0){
+
+const lm=results.multiFaceLandmarks[0]
+
+// ===== 中心 =====
+const nose=lm[1]
+const centerX=nose.x*canvas.width
+const centerY=nose.y*canvas.height
+
+// ===== サイズ（ちょいデカめベース）=====
+const left=lm[234]
+const right=lm[454]
+
+const dx=(right.x-left.x)*canvas.width
+const dy=(right.y-left.y)*canvas.height
+const faceWidth=Math.sqrt(dx*dx + dy*dy)
+
+// ★ここ強化
+const size=faceWidth * 2.2 * scaleAdjust
+
+// ===== 回転 =====
+const angle=Math.atan2(
+(right.y - left.y),
+(right.x - left.x)
+)
+
+// ===== 向き判定（ゆるめ）=====
+const ratio = (nose.x - left.x) / (right.x - left.x)
+
+let direction="center"
+
+if(ratio < 0.30){
+direction="left"
+}
+else if(ratio > 0.80){
+direction="right"
+}
+
+// ===== 口パク =====
+const upper=lm[13]
+const lower=lm[14]
+const mouthOpen = Math.abs(upper.y - lower.y) > 0.02
+
+// ===== 描画 =====
+ctx.save()
+ctx.translate(centerX, centerY)
+ctx.rotate(angle)
+
+if(direction==="right"){
+
+if(mouthOpen){
+ctx.drawImage(mouthImg, -size/2, -size/2, size, size)
+}else{
+ctx.drawImage(faceRightImg, -size/2, -size/2, size, size)
+}
+
+}
+else if(direction==="left"){
+
+if(mouthOpen){
+ctx.drawImage(mouthImg, -size/2, -size/2, size, size)
+}else{
+ctx.drawImage(faceLeftImg, -size/2, -size/2, size, size)
+}
+
+}
+else{
+
+if(mouthOpen){
+ctx.drawImage(mouthImg, -size/2, -size/2, size, size)
+}else{
+ctx.drawImage(faceImg, -size/2, -size/2, size, size)
+}
+
+}
+
+ctx.restore()
+
+}
+
+})
+
+// ===== カメラ =====
+const camera=new Camera(video,{
+onFrame:async()=>{
+await faceMesh.send({image:video})
+},
+width:640,
+height:480
+})
+
+camera.start()
+
 </script>
 
 </body>
