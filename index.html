@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>テント色変更 TEST</title>
+<style>
+  body { text-align:center; font-family:sans-serif; }
+  canvas { border:1px solid #ccc; margin-top:10px; cursor:crosshair; }
+</style>
+</head>
+<body>
+
+<h2>クリック長押し or ドラッグで色変更（PC対応）</h2>
+
+<input type="file" id="fileInput" accept="image/*"><br>
+
+R <input type="number" id="r" value="255" min="0" max="255">
+G <input type="number" id="g" value="0" min="0" max="255">
+B <input type="number" id="b" value="0" min="0" max="255">
+
+<br>
+<canvas id="canvas"></canvas>
+
+<script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+
+<script>
+let canvas = document.getElementById('canvas');
+let ctx = canvas.getContext('2d');
+let img = new Image();
+let originalMat;
+
+let isPressing = false;
+let pressTimer;
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+    let file = e.target.files[0];
+    let reader = new FileReader();
+    reader.onload = () => img.src = reader.result;
+    reader.readAsDataURL(file);
+});
+
+img.onload = () => {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    originalMat = cv.imread(canvas);
+};
+
+// ===== PC対応イベント =====
+canvas.addEventListener('mousedown', (e) => {
+    isPressing = true;
+    pressTimer = setTimeout(() => process(e), 300);
+});
+
+canvas.addEventListener('mouseup', () => {
+    isPressing = false;
+    clearTimeout(pressTimer);
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (isPressing) {
+        process(e); // ドラッグ中も処理
+    }
+});
+
+// ===== 共通処理 =====
+function process(e) {
+    if (!originalMat) return;
+
+    let rect = canvas.getBoundingClientRect();
+    let x = Math.floor(e.clientX - rect.left);
+    let y = Math.floor(e.clientY - rect.top);
+
+    let pixel = ctx.getImageData(x, y, 1, 1).data;
+
+    let tol = 40;
+
+    let lower = new cv.Mat(originalMat.rows, originalMat.cols, originalMat.type(), [
+        Math.max(pixel[0]-tol,0),
+        Math.max(pixel[1]-tol,0),
+        Math.max(pixel[2]-tol,0),
+        0
+    ]);
+
+    let upper = new cv.Mat(originalMat.rows, originalMat.cols, originalMat.type(), [
+        Math.min(pixel[0]+tol,255),
+        Math.min(pixel[1]+tol,255),
+        Math.min(pixel[2]+tol,255),
+        255
+    ]);
+
+    let mask = new cv.Mat();
+    cv.inRange(originalMat, lower, upper, mask);
+
+    let dst = originalMat.clone();
+
+    let r = +document.getElementById('r').value;
+    let g = +document.getElementById('g').value;
+    let b = +document.getElementById('b').value;
+
+    for (let i = 0; i < mask.data.length; i++) {
+        if (mask.data[i] > 0) {
+            let idx = i * 4;
+            dst.data[idx] = r;
+            dst.data[idx+1] = g;
+            dst.data[idx+2] = b;
+        }
+    }
+
+    cv.imshow(canvas, dst);
+
+    mask.delete();
+    dst.delete();
+    lower.delete();
+    upper.delete();
+}
+</script>
+
+</body>
+</html>
