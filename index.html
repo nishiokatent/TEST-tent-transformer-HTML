@@ -73,15 +73,26 @@ const ctx=canvas.getContext("2d")
 function resizeCanvas(){
   const vw = window.innerWidth
   const vh = window.innerHeight
-  const aspect = 16 / 9 // iPhoneカメラ風
+  const aspect = 4/3 // iPhoneカメラ風比率
 
-  let width = vw
-  let height = width / aspect
+  let width, height
 
-  // 高さが画面を超える場合は高さ優先
-  if(height > vh){
+  if(vw > vh){
+    // 横画面
+    width = vw
+    height = width / aspect
+    if(height > vh){
+      height = vh
+      width = height * aspect
+    }
+  } else {
+    // 縦画面
     height = vh
-    width = vh * aspect
+    width = height * aspect
+    if(width > vw){
+      width = vw
+      height = width / aspect
+    }
   }
 
   // 描画解像度
@@ -92,6 +103,8 @@ function resizeCanvas(){
   canvas.style.width = width + "px"
   canvas.style.height = height + "px"
 }
+resizeCanvas()
+window.addEventListener("resize", resizeCanvas)
 
 resizeCanvas()
 window.addEventListener("resize", resizeCanvas)
