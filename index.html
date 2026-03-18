@@ -23,6 +23,8 @@ canvas{
   transform:translate(-50%,-50%);
   border:1px solid #ccc;
   background:#000;
+  max-width:100%;
+  max-height:100%;
 }
 
 /* 🎛 UIを下に固定 */
@@ -71,18 +73,24 @@ function resizeCanvas(){
   const vw = window.innerWidth
   const vh = window.innerHeight
 
-  const aspect = 4/3
+  // 元画像の比率（必要に応じて 4/3 など）
+  const aspect = 4 / 3
 
   let width = vw
-  let height = vw / aspect
+  let height = width / aspect
 
+  // 画面に収まるように調整
   if(height > vh){
     height = vh
-    width = vh * aspect
+    width = height * aspect
   }
 
   canvas.width = width
   canvas.height = height
+
+  // canvas を中央に配置
+  canvas.style.width = width + "px"
+  canvas.style.height = height + "px"
 }
 
 resizeCanvas()
