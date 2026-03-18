@@ -2,32 +2,26 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>VTuber（完全版）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VTuber（調整強化版）</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
 <style>
 body{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
   margin:0;
-  flex-direction:column;
   background:#f5f5f5;
 }
 
-/* スマホでも操作しやすく */
-input[type="range"]{
-  width:80vw;
-  max-width:400px;
-}
-
+/* ★フルスクリーン化 */
 canvas{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100vw;
+  height:100dvh;
   border:1px solid #ccc;
-  max-width:95vw;
-  height:auto;
 }
 
 video{
@@ -54,33 +48,17 @@ const video=document.getElementById("video")
 const canvas=document.getElementById("canvas")
 const ctx=canvas.getContext("2d")
 
-// ===== レスポンシブサイズ =====
+// ★ここだけ修正
 function resizeCanvas(){
-
-const isMobile = window.innerWidth < 768
-
-if(isMobile){
-  canvas.width = window.innerWidth
-  canvas.height = window.innerHeight * 0.7
-}else{
-  function resizeCanvas(){
   const isMobile = window.innerWidth < 768
 
   if(isMobile){
-    // 📱スマホ縦 → 画面いっぱい
     canvas.width = window.innerWidth
     canvas.height = window.innerHeight
   }else{
-    // 💻PC → そのまま
     canvas.width = 640
     canvas.height = 480
   }
-}
-
-resizeCanvas()
-window.addEventListener("resize", resizeCanvas)
-}
-
 }
 
 resizeCanvas()
@@ -97,7 +75,6 @@ faceRightImg.src="/face_right.png"
 faceLeftImg.src="/face_left.png"
 mouthImg.src="/mouth_open.png"
 
-// ===== サイズ調整 =====
 let scaleAdjust=1.5
 
 const slider=document.getElementById("scaleSlider")
@@ -153,15 +130,15 @@ const angle=Math.atan2(
 (right.x - left.x)
 )
 
-// ===== 向き判定（バランス型）=====
+// ===== 向き判定 =====
 const ratio = (nose.x - left.x) / (right.x - left.x)
 
 let direction="center"
 
-if(ratio < 0.35){
+if(ratio < 0.4){
 direction="left"
 }
-else if(ratio > 0.75){
+else if(ratio > 0.6){
 direction="right"
 }
 
@@ -173,18 +150,9 @@ const mouthOpen = Math.abs(upper.y - lower.y) > 0.02
 // ===== 描画 =====
 ctx.save()
 
-// ★中央寄せ＋ちょい追従
-const fixedX = canvas.width / 2
-const fixedY = canvas.height / 2
-const follow = 0.8
-
-const drawX = fixedX + (centerX - fixedX) * follow
-const drawY = fixedY + (centerY - fixedY) * follow
-
-ctx.translate(drawX, drawY)
+ctx.translate(centerX, centerY)
 ctx.rotate(angle)
 
-// ===== 分岐 =====
 if(direction==="right"){
 
 if(mouthOpen){
