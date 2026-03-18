@@ -12,16 +12,34 @@
 body{
   margin:0;
   background:#f5f5f5;
+  overflow:hidden;
 }
 
-/* ★フルスクリーン化 */
+/* 🎯 キャンバスは中央＋比率維持 */
 canvas{
   position:fixed;
-  top:0;
-  left:0;
-  width:100vw;
-  height:100dvh;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
   border:1px solid #ccc;
+  background:#000;
+}
+
+/* 🎛 UIを下に固定 */
+.controls{
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(255,255,255,0.9);
+  padding:10px 15px;
+  border-radius:10px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.2);
+  text-align:center;
+}
+
+input[type="range"]{
+  width:200px;
 }
 
 video{
@@ -32,33 +50,39 @@ video{
 
 <body>
 
-<h2>顔面：馬　β版</h2>
-
-サイズ:
-<input type="range" id="scaleSlider" min="0.5" max="3" step="0.01" value="1.5">
-<span id="scaleValue">1.5</span>
-
-<br><br>
-
 <video id="video" autoplay playsinline></video>
 <canvas id="canvas"></canvas>
+
+<!-- 🎛 UI -->
+<div class="controls">
+  <div>顔面：馬 β版</div>
+  サイズ:
+  <input type="range" id="scaleSlider" min="0.5" max="3" step="0.01" value="1.5">
+  <span id="scaleValue">1.5</span>
+</div>
 
 <script>
 const video=document.getElementById("video")
 const canvas=document.getElementById("canvas")
 const ctx=canvas.getContext("2d")
 
-// ★ここだけ修正
+// 🎯 比率維持リサイズ（4:3）
 function resizeCanvas(){
-  const isMobile = window.innerWidth < 768
+  const vw = window.innerWidth
+  const vh = window.innerHeight
 
-  if(isMobile){
-    canvas.width = window.innerWidth
-    canvas.height = window.innerHeight
-  }else{
-    canvas.width = 640
-    canvas.height = 480
+  const aspect = 4/3
+
+  let width = vw
+  let height = vw / aspect
+
+  if(height > vh){
+    height = vh
+    width = vh * aspect
   }
+
+  canvas.width = width
+  canvas.height = height
 }
 
 resizeCanvas()
@@ -109,12 +133,10 @@ if(results.multiFaceLandmarks.length>0){
 
 const lm=results.multiFaceLandmarks[0]
 
-// ===== 中心 =====
 const nose=lm[1]
 const centerX=nose.x*canvas.width
 const centerY=nose.y*canvas.height
 
-// ===== サイズ =====
 const left=lm[234]
 const right=lm[454]
 
@@ -124,13 +146,11 @@ const faceWidth=Math.sqrt(dx*dx + dy*dy)
 
 const size=faceWidth * 2.2 * scaleAdjust
 
-// ===== 回転 =====
 const angle=Math.atan2(
 (right.y - left.y),
 (right.x - left.x)
 )
 
-// ===== 向き判定 =====
 const ratio = (nose.x - left.x) / (right.x - left.x)
 
 let direction="center"
@@ -142,43 +162,23 @@ else if(ratio > 0.6){
 direction="right"
 }
 
-// ===== 口パク =====
 const upper=lm[13]
 const lower=lm[14]
 const mouthOpen = Math.abs(upper.y - lower.y) > 0.02
 
-// ===== 描画 =====
 ctx.save()
 
 ctx.translate(centerX, centerY)
 ctx.rotate(angle)
 
 if(direction==="right"){
-
-if(mouthOpen){
-ctx.drawImage(mouthImg, -size/2, -size/2, size, size)
-}else{
-ctx.drawImage(faceRightImg, -size/2, -size/2, size, size)
-}
-
+  ctx.drawImage(mouthOpen ? mouthImg : faceRightImg, -size/2, -size/2, size, size)
 }
 else if(direction==="left"){
-
-if(mouthOpen){
-ctx.drawImage(mouthImg, -size/2, -size/2, size, size)
-}else{
-ctx.drawImage(faceLeftImg, -size/2, -size/2, size, size)
-}
-
+  ctx.drawImage(mouthOpen ? mouthImg : faceLeftImg, -size/2, -size/2, size, size)
 }
 else{
-
-if(mouthOpen){
-ctx.drawImage(mouthImg, -size/2, -size/2, size, size)
-}else{
-ctx.drawImage(faceImg, -size/2, -size/2, size, size)
-}
-
+  ctx.drawImage(mouthOpen ? mouthImg : faceImg, -size/2, -size/2, size, size)
 }
 
 ctx.restore()
