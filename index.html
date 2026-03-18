@@ -63,8 +63,22 @@ if(isMobile){
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight * 0.7
 }else{
-  canvas.width = 640
-  canvas.height = 480
+  function resizeCanvas(){
+  const isMobile = window.innerWidth < 768
+
+  if(isMobile){
+    // 📱スマホ縦 → 画面いっぱい
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+  }else{
+    // 💻PC → そのまま
+    canvas.width = 640
+    canvas.height = 480
+  }
+}
+
+resizeCanvas()
+window.addEventListener("resize", resizeCanvas)
 }
 
 }
